@@ -5,21 +5,85 @@ output:
     keep_md: true
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ## Loading and preprocessing the data
 
-
+```{r, echo = TRUE}
+rawdata <- read.csv("activity.csv")
+data <- data.table(rawdata)
+```
 
 ## What is mean total number of steps taken per day?
 
-
+```{r ignoring missing values, echo = TRUE}
+newdata <- data[complete.cases(data), ]
+```
+```{r calculating steps per day, echo = TRUE}
+stepsperday <- as.numeric()
+for (date in unique(newdata$date)) {
+  stepsperday <- c(stepsperday, sum(newdata$steps[newdata$date == date]))
+}
+```
+```{r histogram, echo = TRUE}
+hist(stepsperday, main = "Steps per day")
+```
+```{r mean/median, echo = TURE}
+mean(stepsperday)
+median(stepsperday)
+```
 
 ## What is the average daily activity pattern?
 
+```{r echo = TRUE}
+avsteps <- aggregate(steps ~ interval, newdata, mean)
+plot(avsteps$interval, avsteps$steps, type="l", xlab = "interval", ylab = "steps")
+avsteps[which.max(avsteps$steps), ]
 
+```
 
 ## Imputing missing values
 
+```{r echo = TRUE}
+sum(is.na(data))
+```
+```{r filling missing values, echo = TRUE}
+for (i in 1:nrow(data)) {
+  if (is.na(data$steps[i])){
+    int <- data$interval[i]
+    row <- which(avsteps$interval == int)
+    data$steps[i] <- avsteps$steps[row]
+  }
+}
+```
+```{r steps per day, echo=TRUE}
+stepsperday2 <- as.numeric()
+for (date in unique(newdata$date)) {
+  stepsperday2 <- c(stepsperday2, sum(newdata$steps[newdata$date == date]))
+}
+hist(stepsperday2, main = "Steps per day")
+mean(stepsperday2)
+median(stepsperday2)
 
+```
+The mean is the same with or without missing values.
+The median differs a very little.
+By filling the missing values with the mean for intervals, the impact is practically unnoticeable.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r echo = TRUE}
+data$date <- as.character(data$date)
+data$day <- weekdays(as.Date(data$date))
+for (i in 1:nrow(data)) {
+  if(data$day[i] == "sábado" || data$day[i] == "domingo"){
+    data$day[i] <- "weekend"
+  } else{
+    data$day[i] <- "weekday"
+  }
+}
+avsteps2 <- aggregate(steps ~ interval+day, data, mean)
+library(ggplot2)
+qplot(interval, steps, data=avsteps2, geom=c("line"), xlab="Interval", ylab="Steps", main="") + facet_wrap(~ day, ncol=1)
+```
